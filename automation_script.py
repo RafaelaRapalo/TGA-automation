@@ -219,21 +219,21 @@ for file_name, file_data in data_mass_dict.items():
     # Plot both equations (iron layer limiting rate equation curve + reduction)
     pellet_config.plot(
         graph=iron_layer_limiting_graph,
-        time_data_s=formatted_data[time_column_title],
-        data=formatted_data[iron_layer_limiting_title]
+        time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
+        data=formatted_data[iron_layer_limiting_title].iloc[:max_time_plot_s]
     )
     #Plot equation of mixed control limiting rate equation curve
     pellet_config.plot(
         graph=mixed_control_limiting_graph,
-        time_data_s=formatted_data[time_column_title],
-        data=formatted_data[limiting_mixed_control_title]
+        time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
+        data=formatted_data[limiting_mixed_control_title].iloc[:max_time_plot_s]
     )
 
     #Plot equation of mixed control limiting rate equation curve
     pellet_config.plot(
         graph=complete_internal_burning_graph,
-        time_data_s=formatted_data[time_column_title],
-        data=formatted_data[complete_internal_burning_title]
+        time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
+        data=formatted_data[complete_internal_burning_title].iloc[:max_time_plot_s]
     )
     # ax.plot(xlingress/60, predicted_Y, color='gray', label='linear fitting' + pellet_config.label)
 
