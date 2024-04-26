@@ -242,10 +242,10 @@ reduct_graph.set_xlabel('Time (min)', color = "black", fontsize = 12)
 reduct_graph.set_ylabel('F', color = "black", fontsize = 12)
 
 iron_layer_limiting_graph.set_xlabel('Time (min)', color = "black", fontsize = 12)
-iron_layer_limiting_graph.set_ylabel('$1/2-1/3*F-1/2*(1-F)^{2/3}$', color = "black", fontsize = 12)
+iron_layer_limiting_graph.set_ylabel(r'$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$', color="black", fontsize=12)
 
 mixed_control_limiting_graph.set_xlabel('Time (min)', color = "black", fontsize = 12)
-mixed_control_limiting_graph.set_ylabel('$1-(1-F)^{1/3}$', color = "black", fontsize = 12)
+mixed_control_limiting_graph.set_ylabel(r'$1-(1-F)^\\frac{1}{3}$', color = "black", fontsize = 12)
 
 complete_internal_burning_graph.set_xlabel('Time (min)', color = "black", fontsize = 12)
 complete_internal_burning_graph.set_ylabel('$ln(1-F)$', color = "black", fontsize = 12)
