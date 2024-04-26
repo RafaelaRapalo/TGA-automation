@@ -1,5 +1,6 @@
 from typing import Dict
 import pandas as pd
+from pandas import DataFrame
 import matplotlib.pyplot as plt
 import os
 from scipy.stats import linregress
@@ -126,6 +127,7 @@ limiting_mixed_control_title = 'Mixed_Control_LRE'
 complete_internal_burning_title = 'Complete_Internal_Burning'
 
 max_time_plot_s = 25*60
+experiment_duration = 100*60
 plateau_time = 3*60
 hematite_oxygen_pct = 0.300564
 hematite_iron_pct = 0.699436
@@ -166,7 +168,7 @@ fig4, complete_internal_burning_graph = plt.subplots(figsize=(10, 6))
 for file_name, file_data in data_mass_dict.items():
     pellet_number = int(file_name[pellet_file_id_index_start:pellet_file_id_index_end+1])
     pellet_config = convert_to_pellet_config(pellet_number)
-    formatted_data = file_data.iloc[:, :2]
+    formatted_data:DataFrame = file_data.iloc[:, :2]
     formatted_data.columns = [time_column_title,weight_column_title]
 
     # exclude initial values and set the new initial time as zero
@@ -174,7 +176,7 @@ for file_name, file_data in data_mass_dict.items():
     formatted_data[time_column_title] -= pellet_config.start_time_s
 
     # exclude final values
-    formatted_data = formatted_data.iloc[:max_time_plot_s]
+    formatted_data = formatted_data.iloc[:experiment_duration]
  
     # Oxygen percentage in pellet = (weight + oxygen)/(weight + oxygen + iron)
     formatted_data[oxygen_in_pellet_title] = (formatted_data[weight_column_title] + pellet_config.oxy) / (formatted_data[weight_column_title] + pellet_config.oxy + pellet_config.iron)
@@ -198,8 +200,8 @@ for file_name, file_data in data_mass_dict.items():
     # Plot reduction percentage curve
     pellet_config.plot(
         graph=reduct_graph,
-        time_data_s=formatted_data[time_column_title],
-        data=formatted_data[reduction_title],
+        time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
+        data=formatted_data[reduction_title].iloc[:max_time_plot_s],
         # linregress_ranges=[
         #     LinregressRange(min=40, max=50),
         #     LinregressRange(min=50, max=60),
