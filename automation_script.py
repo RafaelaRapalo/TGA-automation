@@ -125,7 +125,7 @@ iron_layer_limiting_title = 'Iron_Layer_LRE'
 limiting_mixed_control_title = 'Mixed_Control_LRE'
 complete_internal_burning_title = 'Complete_Internal_Burning'
 
-max_time_plot_s = 100*60
+max_time_plot_s = 25*60
 plateau_time = 3*60
 hematite_oxygen_pct = 0.300564
 hematite_iron_pct = 0.699436
@@ -199,18 +199,18 @@ for file_name, file_data in data_mass_dict.items():
     pellet_config.plot(
         graph=reduct_graph,
         time_data_s=formatted_data[time_column_title],
-        data=formatted_data[reduction_pct_title],
-        linregress_ranges=[
-            LinregressRange(min=40, max=50),
-            LinregressRange(min=50, max=60),
-            LinregressRange(min=60, max=70),
-            LinregressRange(min=70, max=80),
-            LinregressRange(min=80, max=90),
-            ]
+        data=formatted_data[reduction_title],
+        # linregress_ranges=[
+        #     LinregressRange(min=40, max=50),
+        #     LinregressRange(min=50, max=60),
+        #     LinregressRange(min=60, max=70),
+        #     LinregressRange(min=70, max=80),
+        #     LinregressRange(min=80, max=90),
+        #     ]
     )
 
     # Fit the rate modlesd
-    formatted_data[iron_layer_limiting_title] = 3-2*formatted_data[reduction_title]-3*pow(1-formatted_data[reduction_title],2/3)
+    formatted_data[iron_layer_limiting_title] = 1/2-(1/3)*formatted_data[reduction_title]-(1/2)*pow(1-formatted_data[reduction_title],2/3)
     formatted_data[limiting_mixed_control_title] = 1-pow(1-formatted_data[reduction_title],1/3)
     formatted_data[complete_internal_burning_title] = np.log(1-formatted_data[reduction_title])
 
@@ -237,10 +237,10 @@ for file_name, file_data in data_mass_dict.items():
 
 #plt.grid(True)
 reduct_graph.set_xlabel('Time (min)', color = "black", fontsize = 12)
-reduct_graph.set_ylabel('Reduction (%)', color = "black", fontsize = 12)
+reduct_graph.set_ylabel('F', color = "black", fontsize = 12)
 
 iron_layer_limiting_graph.set_xlabel('Time (min)', color = "black", fontsize = 12)
-iron_layer_limiting_graph.set_ylabel('$3-2F-3(1-F)^{2/3}$', color = "black", fontsize = 12)
+iron_layer_limiting_graph.set_ylabel('$1/2-1/3*F-1/2*(1-F)^{2/3}$', color = "black", fontsize = 12)
 
 mixed_control_limiting_graph.set_xlabel('Time (min)', color = "black", fontsize = 12)
 mixed_control_limiting_graph.set_ylabel('$1-(1-F)^{1/3}$', color = "black", fontsize = 12)
