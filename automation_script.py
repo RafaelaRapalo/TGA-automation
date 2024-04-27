@@ -31,6 +31,18 @@ fig2, iron_layer_limiting_graph = plt.subplots(figsize=(10, 6))
 fig3, mixed_control_limiting_graph = plt.subplots(figsize=(10, 6))
 fig4, complete_internal_burning_graph = plt.subplots(figsize=(10, 6))
 
+def __main__():
+    """
+    - Read the data files from local directory
+    - Format data for Iron Reduction percentage
+    - Plot graphs
+    """
+    # Get the data from files
+    dir_current = os.path.dirname(os.path.abspath(__file__))
+    experiment_data_files:Dict[str, pd.DataFrame] = read_data_files(dir_current)
+    create_graphs(experiment_data_files)
+    plt.show()
+    
 class LinregressRange:
     def __init__(self, min, max) -> None:
         self.min = min
@@ -146,6 +158,11 @@ def convert_file_name_to_pellet_config(file_name:str) -> Pellet:
 
 # helper methods
 def read_data_files(path: str) -> Dict[str, pd.DataFrame]:
+    """
+    TXT files are expected to be in the following format -> [Time:Weight]
+
+    Returns: Dictionary with {File Name:DataFrame}
+    """
     data_mass_dict: Dict[str, pd.DataFrame] = {}  # dict with file name as keys and DataFrame as values
 
     # Lists all files in the directory
@@ -169,6 +186,16 @@ def read_data_files(path: str) -> Dict[str, pd.DataFrame]:
     return data_mass_dict
 
 def format_file_data(file_data:DataFrame, pellet_config:Pellet) -> DataFrame:
+    """
+    file_data should be a DataFrame with the following format -> [Time ; Weight]
+
+    Returns -> Formatted data with the following collumns:
+
+    [time_column_title ; weight_column_title ; oxygen_in_pellet_title ; 
+    reduction_title ; reduction_pct_title ; iron_layer_limiting_title ;
+    limiting_mixed_control_title ; complete_internal_burning_title]
+    """
+    # Use first two columns -> Time : Weight
     formatted_data:DataFrame = file_data.iloc[:, :2]
     formatted_data.columns = [time_column_title,weight_column_title]
 
@@ -204,6 +231,11 @@ def format_file_data(file_data:DataFrame, pellet_config:Pellet) -> DataFrame:
         
     return formatted_data
 
+def create_graphs(experiment_data_files: Dict[str, pd.DataFrame]):
+
+    plot_data_points(experiment_data_files)
+    config_graph_labels()
+
 def plot_data_points(experiment_data_files:DataFrame):
     
     for file_name, file_data in experiment_data_files.items():
@@ -238,11 +270,7 @@ def plot_data_points(experiment_data_files:DataFrame):
             data=formatted_data[complete_internal_burning_title].iloc[:max_time_plot_s]
         )
 
-
-def plot_data(experiment_data_files: Dict[str, pd.DataFrame]):
-
-    plot_data_points(experiment_data_files)
-
+def config_graph_labels():
     reduct_graph.set_xlabel('Time (min)', color="black", fontsize=12)
     reduct_graph.set_ylabel('F', color="black", fontsize=12)
 
@@ -261,8 +289,4 @@ def plot_data(experiment_data_files: Dict[str, pd.DataFrame]):
     mixed_control_limiting_graph.legend(loc='lower right')
     complete_internal_burning_graph.legend(loc='lower right')
 
-# Get the data from files
-dir_current = os.path.dirname(os.path.abspath(__file__))
-experiment_data_files = read_data_files(dir_current)
-plot_data(experiment_data_files)
-plt.show()
+__main__()
