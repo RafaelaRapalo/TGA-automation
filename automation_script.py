@@ -42,7 +42,7 @@ def __main__():
     experiment_data_files:Dict[str, pd.DataFrame] = read_data_files(dir_current)
     create_graphs(experiment_data_files)
     plt.show()
-    
+
 class LinregressRange:
     def __init__(self, min, max) -> None:
         self.min = min
@@ -271,18 +271,22 @@ def plot_data_points(experiment_data_files:DataFrame):
         )
 
 def config_graph_labels():
-    reduct_graph.set_xlabel('Time (min)', color="black", fontsize=12)
-    reduct_graph.set_ylabel('F', color="black", fontsize=12)
+    font_size = 12
+    label_color = "black"
+    time_label = 'Time (min)'
 
-    iron_layer_limiting_graph.set_xlabel('Time (min)', color="black", fontsize=12)
-    iron_layer_limiting_graph.set_ylabel('$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$', color="black",
-                                        fontsize=12)
+    reduct_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
+    reduct_graph.set_ylabel('F', color=label_color, fontsize=font_size)
 
-    mixed_control_limiting_graph.set_xlabel('Time (min)', color="black", fontsize=12)
-    mixed_control_limiting_graph.set_ylabel('$1-(1-F)^\\frac{1}{3}$', color="black", fontsize=12)
+    iron_layer_limiting_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
+    iron_layer_limiting_graph.set_ylabel('$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$', color=label_color,
+                                        fontsize=font_size)
 
-    complete_internal_burning_graph.set_xlabel('Time (min)', color="black", fontsize=12)
-    complete_internal_burning_graph.set_ylabel('$ln(1-F)$', color="black", fontsize=12)
+    mixed_control_limiting_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
+    mixed_control_limiting_graph.set_ylabel('$1-(1-F)^\\frac{1}{3}$', color=label_color, fontsize=font_size)
+
+    complete_internal_burning_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
+    complete_internal_burning_graph.set_ylabel('$ln(1-F)$', color=label_color, fontsize=font_size)
 
     reduct_graph.legend(loc='lower right')
     iron_layer_limiting_graph.legend(loc='lower right')
