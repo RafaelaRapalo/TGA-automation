@@ -1,6 +1,6 @@
-from typing import Dict
+from typing import Dict, Tuple
 import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, Series
 import matplotlib.pyplot as plt
 import os
 from scipy.stats import linregress
@@ -26,13 +26,6 @@ plateau_time = 3*60
 hematite_oxygen_pct = 0.300564
 hematite_iron_pct = 0.699436
 
-# Figure setup
-fig1, reduct_graph = plt.subplots(figsize=(10, 6))
-fig2, iron_layer_limiting_graph = plt.subplots(figsize=(10, 6))
-fig3, mixed_control_limiting_graph = plt.subplots(figsize=(10, 6))
-fig4, complete_internal_burning_graph = plt.subplots(figsize=(10, 6))
-fig5, external_mass_transfer_graph = plt.subplots(figsize=(10, 6))
-
 def __main__():
     """
     - Read the data files from local directory
@@ -42,8 +35,9 @@ def __main__():
     # Get the data from files
     dir_current = os.path.dirname(os.path.abspath(__file__))
     experiment_data_files:Dict[str, pd.DataFrame] = read_data_files(dir_current)
-    create_graphs(experiment_data_files)
-    plt.show()
+    graphManager = GraphManager()
+    graphManager.create_graphs(experiment_data_files)
+    graphManager.show_graphs()
 
 class LinregressRange:
     def __init__(self, min, max) -> None:
@@ -76,7 +70,7 @@ class Pellet:
 
         return predicted_Y, slope, intercept
 
-    def plot(self, graph, time_data_s, data, linregress_ranges:list[LinregressRange] = []):
+    def plot(self, graph, time_data_s:Series, data:Series, linregress_ranges:list[LinregressRange] = []):
         # copy label for modifications
         label = self.label
 
@@ -105,91 +99,185 @@ class Pellet:
             label=label,
             alpha=1
         )
+        
+class GraphDataConfig:
+    def __init__(self, y_label:str, title:str, x_data, y_data, font_size:int = 20, label_color:str = "black", x_label:str = 'Time (min)') -> None:
+        _,self.graph = plt.subplots(figsize=(10, 6))
+        self.title = title
+        self.graph.set_xlabel(x_label, color=label_color, fontsize=font_size)
+        self.graph.set_ylabel(y_label, color=label_color, fontsize=font_size)
+        self.graph.tick_params(labelsize=font_size)
+        self.graph.legend(loc='lower right')
+        self.x_data = x_data
+        self.y_data = y_data
+        
+class FormattedValues:
+    def __init__(self, time_data:Series, weight_data:Series, plateau_value:float) -> None:
+        self.time_data:Series = time_data
+        self.weight_data:Series = weight_data
+        self.plateau_value:float = plateau_value
 
+class GraphManager:        
+    def show_graphs():
+        plt.show()
+        
+    def create_graphs(experiment_data_files: Dict[str, pd.DataFrame]):
+
+        GraphManager.plot_data_points(experiment_data_files)
+        
+    def format_file_data(file_data:DataFrame, pellet_config:Pellet) -> FormattedValues:
+        """
+        file_data should be a DataFrame with the following format -> [Time ; Weight]
+
+        Returns -> FormattedValues with time_data, weight_data and plateau_value
+        """
+        # Use first two columns -> Time : Weight
+        formatted_data:DataFrame = file_data.iloc[:, :2]
+        formatted_data.columns = [time_column_title,weight_column_title]
+
+        # exclude initial values and set the new initial time as zero
+        formatted_data = formatted_data.iloc[pellet_config.start_time_s:]
+        formatted_data[time_column_title] -= pellet_config.start_time_s
+        plateau_value = formatted_data[weight_column_title].tail(plateau_time).median()
+        
+        # exclude final values
+        formatted_data = formatted_data.iloc[:experiment_duration]
+        
+        return FormattedValues(
+            time_data=formatted_data[time_column_title],
+            weight_data=formatted_data[weight_column_title],
+            plateau_value=plateau_value
+        )
+
+
+    def plot_data_points(experiment_data_files:DataFrame):
+        
+        for file_name, file_data in experiment_data_files.items():
+            pellet_config = convert_file_name_to_pellet_config(file_name)
+            graph_configs:list[GraphDataConfig] = GraphManager.get_graph_configs(file_data, pellet_config)
+            
+            for graph_config in graph_configs:
+                pellet_config.plot(
+                    graph=graph_config.graph,
+                    time_data_s=graph_config.x_data.iloc[:max_time_plot_s],
+                    data=graph_config.y_data.iloc[:max_time_plot_s]
+                )
+
+    def get_graph_configs(self,file_data:Series, pellet_config:Pellet) -> list[GraphDataConfig]:
+        formatted_values:FormattedValues = self.format_file_data(file_data, pellet_config)
+        
+        reduction_values = ((formatted_values.weight_data/formatted_values.plateau_value) * pellet_config.iron_content_XRD)
+        iron_layer_limiting_values = 1/2-(1/3)*reduction_values-(1/2)*pow(1-reduction_values,2/3)
+        limiting_mixed_control_values = 1-pow(1-reduction_values,1/3)
+        complete_internal_burning_values = np.log(1-reduction_values)
+        external_mass_transfer_values = 3.7594*0.0008155/(2*pellet_config.initial_radius)*4*np.pi*pow(pellet_config.initial_radius,2)*(11.04921-4.40365)*formatted_values.time_data/(pellet_config.initial_mass/(55.85+1.5*16))
+        # # Reduction = ((Ox / Fe)[fe2o3] - (Ox / Fe)[DRI]) / (Ox / Fe)[fe2o3]
+        # formatted_data[reduction_title] = ((hematite_oxygen_pct / hematite_iron_pct) - (formatted_data[oxygen_in_pellet_title]/hematite_iron_pct)) / (hematite_oxygen_pct / hematite_iron_pct)
+        
+
+        # # formatted_data[reduction_pct_title] = formatted_data[weight_column_title] delta * 97%
+        # # Reduction Percentage = ((Ox / Fe)[fe2o3] - (Ox / Fe)[DRI]) * 100 / (Ox / Fe)[fe2o3]
+        # formatted_data[reduction_pct_title] = formatted_data[reduction_title] * 100
+
+        # Correcting reduction curves from XRD result
+        # plateau_value = formatted_data[weight_column_title].tail(plateau_time).min()
+        # formatted_data[weight_column_title] = formatted_data[weight_column_title].rolling(window=10).mean()
+
+        return [
+            GraphDataConfig(
+                y_label='F',
+                title=reduction_title,
+                x_data=formatted_values.time_data,
+                y_data=reduction_values
+            ),
+            GraphDataConfig(
+                y_label='$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$',
+                title=iron_layer_limiting_title,
+                x_data=formatted_values.time_data,
+                y_data=iron_layer_limiting_values
+            ),
+            GraphDataConfig(
+                y_label='$1-(1-F)^\\frac{1}{3}$',
+                title=limiting_mixed_control_title,
+                x_data=formatted_values.time_data,
+                y_data=limiting_mixed_control_values
+            ),
+            GraphDataConfig(
+                y_label='$ln(1-F)$',
+                title=complete_internal_burning_title,
+                x_data=formatted_values.time_data,
+                y_data=complete_internal_burning_values
+            ),
+            GraphDataConfig(
+                y_label='$F$',
+                title=external_mass_transfer_title,
+                x_data=formatted_values.time_data,
+                y_data=external_mass_transfer_values
+            ),
+        ]
+
+
+    
 def convert_to_pellet_config(pellet_number:int) -> Pellet:
-    #Information Pellet 1
-    pellet_1 = Pellet(
-        initial_mass=9.695,
-        start_time_s=4670,
-        color='blue',
-        label='D=17.1mm',
-        iron_content_XRD=1,
-        initial_radius = 0.0085
-    )
 
-    #Information Pellet 2
-    pellet_2 = Pellet(
-        initial_mass=9.2991,
-        start_time_s=4483,
-        color='firebrick',
-        label='D=17.2mm',
-        iron_content_XRD=1,
-        initial_radius = 0.0086
-    )
-
-    #Information Pellet 5
-    pellet_5 = Pellet(
-        initial_mass=5.423,
-        start_time_s=4550,
-        color='red',
-        label='D=13.9mm',
-        iron_content_XRD=1,
-        initial_radius = 0.00695
-    )
-
-    #Information Pellet 6
-    pellet_6 = Pellet(
-        initial_mass=4.8950,
-        start_time_s=4552,
-        color='magenta',
-        label='D=13.4mm',
-        iron_content_XRD=1,
-        initial_radius = 0.0067
-    )
-
-    #Information Pellet 7
-    pellet_7 = Pellet(
-        initial_mass=4.1002,
-        start_time_s=4493,
-        color='orange',
-        label='D=12.8mm',
-        iron_content_XRD=1,
-        initial_radius = 0.0064
-    )
-
-    #Information Pellet 9
-    pellet_9 = Pellet(
-        initial_mass=1.6551,
-        start_time_s=4580,
-        color='green',
-        label='D=9.5mm',
-        iron_content_XRD=1,
-        initial_radius = 0.00475
-    )
-
-    #Information Pellet 10
-    pellet_10 = Pellet(
-        initial_mass=1.9795,
-        start_time_s=4660,
-        color='purple',
-        label='D=9.8mm',
-        iron_content_XRD=1,
-        initial_radius = 0.0049
-    )
-
+    # switcher for each pellet number
     switcher = {
-        1: pellet_1,
-        2: pellet_2,
-        5: pellet_5,
-        6: pellet_6,
-        7: pellet_7,
-        9: pellet_9,
-        10: pellet_10,
+        1: Pellet(
+            initial_mass=9.695,
+            start_time_s=4670,
+            color='blue',
+            label='D=17.1mm',
+            iron_content_XRD=1,
+            initial_radius = 0.0085
+        ),
+        2: Pellet(
+            initial_mass=9.2991,
+            start_time_s=4483,
+            color='firebrick',
+            label='D=17.2mm',
+            iron_content_XRD=1,
+            initial_radius = 0.0086
+        ),
+        5: Pellet(
+            initial_mass=5.423,
+            start_time_s=4550,
+            color='red',
+            label='D=13.9mm',
+            iron_content_XRD=1,
+            initial_radius = 0.00695),
+        6: Pellet(
+            initial_mass=4.8950,
+            start_time_s=4552,
+            color='magenta',
+            label='D=13.4mm',
+            iron_content_XRD=1,
+            initial_radius = 0.0067),
+        7: Pellet(
+            initial_mass=4.1002,
+            start_time_s=4493,
+            color='orange',
+            label='D=12.8mm',
+            iron_content_XRD=1,
+            initial_radius = 0.0064),
+        9: Pellet(
+            initial_mass=1.6551,
+            start_time_s=4580,
+            color='green',
+            label='D=9.5mm',
+            iron_content_XRD=1,
+            initial_radius = 0.00475),
+        10: Pellet(
+            initial_mass=1.9795,
+            start_time_s=4660,
+            color='purple',
+            label='D=9.8mm',
+            iron_content_XRD=1,
+            initial_radius = 0.0049),
     }
+    
     if pellet_number not in switcher:
-        raise ValueError(f"No file found for Pellet number: {pellet_number}")
+        raise ValueError(f"No configuration found for Pellet number: {pellet_number}")
  
-    # get() method of dictionary data type returns value of passed argument if it is present in dictionary otherwise second argument will be assigned as default value of passed argument
     return switcher.get(pellet_number) # type: ignore
 
 def convert_file_name_to_pellet_config(file_name:str) -> Pellet:
@@ -224,130 +312,5 @@ def read_data_files(path: str) -> Dict[str, pd.DataFrame]:
                 data_mass_dict[file_name_without_txt] = pd.read_csv(full_path, sep='\t')
 
     return data_mass_dict
-
-def format_file_data(file_data:DataFrame, pellet_config:Pellet) -> DataFrame:
-    """
-    file_data should be a DataFrame with the following format -> [Time ; Weight]
-
-    Returns -> Formatted data with the following collumns:
-
-    [time_column_title ; weight_column_title ; oxygen_in_pellet_title ; 
-    reduction_title ; reduction_pct_title ; iron_layer_limiting_title ;
-    limiting_mixed_control_title ; complete_internal_burning_title]
-    """
-    # Use first two columns -> Time : Weight
-    formatted_data:DataFrame = file_data.iloc[:, :2]
-    formatted_data.columns = [time_column_title,weight_column_title]
-
-        # exclude initial values and set the new initial time as zero
-    formatted_data = formatted_data.iloc[pellet_config.start_time_s:]
-    formatted_data[time_column_title] -= pellet_config.start_time_s
-
-        # exclude final values
-    formatted_data = formatted_data.iloc[:experiment_duration]
-    
-        # Oxygen percentage in pellet = (weight + oxygen)/(weight + oxygen + iron)
-    formatted_data[oxygen_in_pellet_title] = (formatted_data[weight_column_title] + pellet_config.oxy) / (formatted_data[weight_column_title] + pellet_config.oxy + pellet_config.iron)
-
-        # # Reduction = ((Ox / Fe)[fe2o3] - (Ox / Fe)[DRI]) / (Ox / Fe)[fe2o3]
-        # formatted_data[reduction_title] = ((hematite_oxygen_pct / hematite_iron_pct) - (formatted_data[oxygen_in_pellet_title]/hematite_iron_pct)) / (hematite_oxygen_pct / hematite_iron_pct)
-        
-
-        # # formatted_data[reduction_pct_title] = formatted_data[weight_column_title] delta * 97%
-        # # Reduction Percentage = ((Ox / Fe)[fe2o3] - (Ox / Fe)[DRI]) * 100 / (Ox / Fe)[fe2o3]
-        # formatted_data[reduction_pct_title] = formatted_data[reduction_title] * 100
-
-        # Correcting reduction curves from XRD result
-        # plateau_value = formatted_data[weight_column_title].tail(plateau_time).min()
-        # formatted_data[weight_column_title] = formatted_data[weight_column_title].rolling(window=10).mean()
-    plateau_value = formatted_data[weight_column_title].tail(plateau_time).median()
-    formatted_data[reduction_title] = (formatted_data[weight_column_title]/plateau_value) * pellet_config.iron_content_XRD
-    formatted_data[reduction_pct_title] = formatted_data[reduction_title]*100
-    
-    # Fit the rate modlesd
-    formatted_data[iron_layer_limiting_title] = 1/2-(1/3)*formatted_data[reduction_title]-(1/2)*pow(1-formatted_data[reduction_title],2/3)
-    formatted_data[limiting_mixed_control_title] = 1-pow(1-formatted_data[reduction_title],1/3)
-    formatted_data[complete_internal_burning_title] = np.log(1-formatted_data[reduction_title])
-    formatted_data[external_mass_transfer_title]= 3.7594*0.0008155/(2*pellet_config.initial_radius)*4*np.pi*pow(pellet_config.initial_radius,2)*(11.04921-4.40365)*formatted_data[time_column_title]/(pellet_config.initial_mass/(55.85+1.5*16))
-    return formatted_data
-
-def create_graphs(experiment_data_files: Dict[str, pd.DataFrame]):
-
-    plot_data_points(experiment_data_files)
-    config_graph_labels()
-
-def plot_data_points(experiment_data_files:DataFrame):
-    
-    for file_name, file_data in experiment_data_files.items():
-        pellet_config = convert_file_name_to_pellet_config(file_name)
-        formatted_data = format_file_data(file_data, pellet_config)
-
-        # Plot reduction percentage curve
-        pellet_config.plot(
-            graph=reduct_graph,
-            time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
-            data=formatted_data[reduction_title].iloc[:max_time_plot_s],
-        )
-
-        # Plot both equations (iron layer limiting rate equation curve + reduction)
-        pellet_config.plot(
-            graph=iron_layer_limiting_graph,
-            time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
-            data=formatted_data[iron_layer_limiting_title].iloc[:max_time_plot_s]
-        )
-
-        # Plot equation of mixed control limiting rate equation curve
-        pellet_config.plot(
-            graph=mixed_control_limiting_graph,
-            time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
-            data=formatted_data[limiting_mixed_control_title].iloc[:max_time_plot_s]
-        )
-
-        # Plot equation of mixed control limiting rate equation curve
-        pellet_config.plot(
-            graph=complete_internal_burning_graph,
-            time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
-            data=formatted_data[complete_internal_burning_title].iloc[:max_time_plot_s]
-        )
-
-        # Plot equation of external mass transfer limiting rate equation curve
-        pellet_config.plot(
-            graph=external_mass_transfer_graph,
-            time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
-            data=formatted_data[external_mass_transfer_title].iloc[:max_time_plot_s]
-        )
-
-def config_graph_labels():
-    font_size = 20
-    label_color = "black"
-    time_label = 'Time (min)'
-
-
-    reduct_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
-    reduct_graph.set_ylabel('F', color=label_color, fontsize=font_size)
-    reduct_graph.tick_params(labelsize=font_size)
-
-    iron_layer_limiting_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
-    iron_layer_limiting_graph.set_ylabel('$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$', color=label_color,fontsize=font_size)
-    iron_layer_limiting_graph.tick_params(labelsize=font_size)
-
-    mixed_control_limiting_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
-    mixed_control_limiting_graph.set_ylabel('$1-(1-F)^\\frac{1}{3}$', color=label_color, fontsize=font_size)
-    mixed_control_limiting_graph.tick_params(labelsize=font_size)
-
-    complete_internal_burning_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
-    complete_internal_burning_graph.set_ylabel('$ln(1-F)$', color=label_color, fontsize=font_size)
-    complete_internal_burning_graph.tick_params(labelsize=font_size)
-
-    external_mass_transfer_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
-    external_mass_transfer_graph.set_ylabel('$F$', color=label_color, fontsize=font_size)
-    external_mass_transfer_graph.tick_params(labelsize=font_size)
-
-    reduct_graph.legend(loc='lower right')
-    iron_layer_limiting_graph.legend(loc='lower right')
-    mixed_control_limiting_graph.legend(loc='lower right')
-    complete_internal_burning_graph.legend(loc='lower right')
-    external_mass_transfer_graph.legend(loc='lower right')
-
 
 __main__()
