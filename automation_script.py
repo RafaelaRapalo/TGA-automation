@@ -18,6 +18,7 @@ reduction_pct_title = 'Reduction_Pct'
 iron_layer_limiting_title = 'Iron_Layer_LRE'
 limiting_mixed_control_title = 'Mixed_Control_LRE'
 complete_internal_burning_title = 'Complete_Internal_Burning'
+external_mass_transfer_title = 'External_Mass_Transfer_LRE'
 
 max_time_plot_s = 25*60
 experiment_duration = 100*60
@@ -30,6 +31,7 @@ fig1, reduct_graph = plt.subplots(figsize=(10, 6))
 fig2, iron_layer_limiting_graph = plt.subplots(figsize=(10, 6))
 fig3, mixed_control_limiting_graph = plt.subplots(figsize=(10, 6))
 fig4, complete_internal_burning_graph = plt.subplots(figsize=(10, 6))
+fig5, external_mass_transfer_graph = plt.subplots(figsize=(10, 6))
 
 def __main__():
     """
@@ -49,7 +51,7 @@ class LinregressRange:
         self.max = max
 
 class Pellet:
-    def __init__(self, initial_mass, start_time_s, color:str, label:str, iron_content_XRD:float):
+    def __init__(self, initial_mass, start_time_s, color:str, label:str, iron_content_XRD:float,initial_radius):
         iron_content =0.699436
         oxygen_content = 0.300564
         gangue_content = 0.04
@@ -60,6 +62,7 @@ class Pellet:
         self.color = color
         self.label = label
         self.iron_content_XRD = iron_content_XRD
+        self.initial_radius = initial_radius
 
     def get_linregress_y_values(self, x, y):
 
@@ -104,13 +107,24 @@ class Pellet:
         )
 
 def convert_to_pellet_config(pellet_number:int) -> Pellet:
-    #Information Pellet 1W
+    #Information Pellet 1
     pellet_1 = Pellet(
         initial_mass=9.695,
         start_time_s=4670,
         color='blue',
         label='D=17.1mm',
-        iron_content_XRD=1
+        iron_content_XRD=1,
+        initial_radius = 0.0085
+    )
+
+    #Information Pellet 2
+    pellet_2 = Pellet(
+        initial_mass=9.2991,
+        start_time_s=4483,
+        color='firebrick',
+        label='D=17.2mm',
+        iron_content_XRD=1,
+        initial_radius = 0.0086
     )
 
     #Information Pellet 5
@@ -119,7 +133,28 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4550,
         color='red',
         label='D=13.9mm',
-        iron_content_XRD=1
+        iron_content_XRD=1,
+        initial_radius = 0.00695
+    )
+
+    #Information Pellet 6
+    pellet_6 = Pellet(
+        initial_mass=4.8950,
+        start_time_s=4552,
+        color='magenta',
+        label='D=13.4mm',
+        iron_content_XRD=1,
+        initial_radius = 0.0067
+    )
+
+    #Information Pellet 7
+    pellet_7 = Pellet(
+        initial_mass=4.1002,
+        start_time_s=4493,
+        color='orange',
+        label='D=12.8mm',
+        iron_content_XRD=1,
+        initial_radius = 0.0064
     )
 
     #Information Pellet 9
@@ -128,7 +163,8 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4580,
         color='green',
         label='D=9.5mm',
-        iron_content_XRD=1
+        iron_content_XRD=1,
+        initial_radius = 0.00475
     )
 
     #Information Pellet 10
@@ -137,12 +173,16 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4660,
         color='purple',
         label='D=9.8mm',
-        iron_content_XRD=1
+        iron_content_XRD=1,
+        initial_radius = 0.0049
     )
 
     switcher = {
         1: pellet_1,
+        2: pellet_2,
         5: pellet_5,
+        6: pellet_6,
+        7: pellet_7,
         9: pellet_9,
         10: pellet_10,
     }
@@ -228,7 +268,7 @@ def format_file_data(file_data:DataFrame, pellet_config:Pellet) -> DataFrame:
     formatted_data[iron_layer_limiting_title] = 1/2-(1/3)*formatted_data[reduction_title]-(1/2)*pow(1-formatted_data[reduction_title],2/3)
     formatted_data[limiting_mixed_control_title] = 1-pow(1-formatted_data[reduction_title],1/3)
     formatted_data[complete_internal_burning_title] = np.log(1-formatted_data[reduction_title])
-        
+    formatted_data[external_mass_transfer_title]= 3.7594*0.0008155/(2*pellet_config.initial_radius)*4*np.pi*pow(pellet_config.initial_radius,2)*(11.04921-4.40365)*formatted_data[time_column_title]/(pellet_config.initial_mass/(55.85+1.5*16))
     return formatted_data
 
 def create_graphs(experiment_data_files: Dict[str, pd.DataFrame]):
@@ -270,27 +310,44 @@ def plot_data_points(experiment_data_files:DataFrame):
             data=formatted_data[complete_internal_burning_title].iloc[:max_time_plot_s]
         )
 
+        # Plot equation of external mass transfer limiting rate equation curve
+        pellet_config.plot(
+            graph=external_mass_transfer_graph,
+            time_data_s=formatted_data[time_column_title].iloc[:max_time_plot_s],
+            data=formatted_data[external_mass_transfer_title].iloc[:max_time_plot_s]
+        )
+
 def config_graph_labels():
-    font_size = 12
+    font_size = 20
     label_color = "black"
     time_label = 'Time (min)'
 
+
     reduct_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
     reduct_graph.set_ylabel('F', color=label_color, fontsize=font_size)
+    reduct_graph.tick_params(labelsize=font_size)
 
     iron_layer_limiting_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
-    iron_layer_limiting_graph.set_ylabel('$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$', color=label_color,
-                                        fontsize=font_size)
+    iron_layer_limiting_graph.set_ylabel('$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$', color=label_color,fontsize=font_size)
+    iron_layer_limiting_graph.tick_params(labelsize=font_size)
 
     mixed_control_limiting_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
     mixed_control_limiting_graph.set_ylabel('$1-(1-F)^\\frac{1}{3}$', color=label_color, fontsize=font_size)
+    mixed_control_limiting_graph.tick_params(labelsize=font_size)
 
     complete_internal_burning_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
     complete_internal_burning_graph.set_ylabel('$ln(1-F)$', color=label_color, fontsize=font_size)
+    complete_internal_burning_graph.tick_params(labelsize=font_size)
+
+    external_mass_transfer_graph.set_xlabel(time_label, color=label_color, fontsize=font_size)
+    external_mass_transfer_graph.set_ylabel('$F$', color=label_color, fontsize=font_size)
+    external_mass_transfer_graph.tick_params(labelsize=font_size)
 
     reduct_graph.legend(loc='lower right')
     iron_layer_limiting_graph.legend(loc='lower right')
     mixed_control_limiting_graph.legend(loc='lower right')
     complete_internal_burning_graph.legend(loc='lower right')
+    external_mass_transfer_graph.legend(loc='lower right')
+
 
 __main__()
