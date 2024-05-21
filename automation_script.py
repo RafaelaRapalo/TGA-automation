@@ -36,11 +36,11 @@ def __main__():
     plt.show()
 
 class GraphsConfigurations:
-    reduct_graph_config = GraphConfig('F',y_values=graph_equations.reduction)
-    iron_layer_limiting_graph_config = GraphConfig('$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$',y_values=graph_equations.iron_layer_limiting)
-    mixed_control_limiting_graph_config = GraphConfig('$1-(1-F)^\\frac{1}{3}$',y_values=graph_equations.limiting_mixed_control)
-    complete_internal_burning_graph_config = GraphConfig('$ln(1-F)$',y_values=graph_equations.complete_internal_burning)
-    external_mass_transfer_graph_config = GraphConfig('$F$',y_values=graph_equations.external_mass_transfer)
+    reduct_graph_config = GraphConfig('F',y_values_callable=lambda:graph_equations.reduction)
+    iron_layer_limiting_graph_config = GraphConfig('$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$',y_values_callable=lambda:graph_equations.iron_layer_limiting)
+    mixed_control_limiting_graph_config = GraphConfig('$1-(1-F)^\\frac{1}{3}$',y_values_callable=lambda:graph_equations.limiting_mixed_control)
+    complete_internal_burning_graph_config = GraphConfig('$ln(1-F)$',y_values_callable=lambda:graph_equations.complete_internal_burning)
+    external_mass_transfer_graph_config = GraphConfig('$F$',y_values_callable=lambda:graph_equations.external_mass_transfer)
     
 class LinregressRange:
     def __init__(self, min, max) -> None:
@@ -77,7 +77,7 @@ class Pellet:
         self._plot(
             graph=graph_config.graph,
             time_data_s=graph_equations.time.iloc[:max_time_plot_s],
-            data=graph_config.y_values.iloc[:max_time_plot_s],
+            data=graph_config.y_values().iloc[:max_time_plot_s],
             linregress_ranges=linregress_ranges
         )
 
@@ -265,11 +265,12 @@ def plot_data_points(experiment_data_files:DataFrame):
 
         # Iterate over all graphs in Graphs
         for _, graph_config in vars(GraphsConfigurations).items():
-            pellet_config.plot(graph_config)
+            if isinstance(graph_config,GraphConfig):
+                pellet_config.plot(graph_config)
         pellet_config._plot(
             graph=GraphsConfigurations.reduct_graph_config.graph,
-            data=graph_equations.external_mass_transfer.iloc[:25],
-            time_data_s=graph_equations.time.iloc[:25],
+            data=graph_equations.external_mass_transfer.iloc[:max_time_plot_s],
+            time_data_s=graph_equations.time.iloc[:max_time_plot_s],
         )
 
 __main__()
