@@ -36,11 +36,25 @@ def __main__():
     plt.show()
 
 class GraphsConfigurations:
-    reduct_graph_config = GraphConfig('F',y_values_callable=lambda:graph_equations.reduction)
-    iron_layer_limiting_graph_config = GraphConfig('$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$',y_values_callable=lambda:graph_equations.iron_layer_limiting)
-    mixed_control_limiting_graph_config = GraphConfig('$1-(1-F)^\\frac{1}{3}$',y_values_callable=lambda:graph_equations.limiting_mixed_control)
-    complete_internal_burning_graph_config = GraphConfig('$ln(1-F)$',y_values_callable=lambda:graph_equations.complete_internal_burning)
-    external_mass_transfer_graph_config = GraphConfig('$F$',y_values_callable=lambda:graph_equations.external_mass_transfer)
+    def __init__(self):
+        self.reduct_graph_config = GraphConfig(plt,'F',y_values_callable=lambda:graph_equations.reduction)
+        self.iron_layer_limiting_graph_config = GraphConfig(plt,'$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$',y_values_callable=lambda:graph_equations.iron_layer_limiting)
+        self.mixed_control_limiting_graph_config = GraphConfig(plt,'$1-(1-F)^\\frac{1}{3}$',y_values_callable=lambda:graph_equations.limiting_mixed_control)
+        self.complete_internal_burning_graph_config = GraphConfig(plt,'$ln(1-F)$',y_values_callable=lambda:graph_equations.complete_internal_burning)
+        self.external_mass_transfer_graph_config = GraphConfig(plt,'$F$',y_values_callable=lambda:graph_equations.external_mass_transfer)
+
+    def get_all_graphs(self):
+        all_graphs:list[GraphConfig] = []
+        for _, graph_config in vars(self).items():
+            if isinstance(graph_config,GraphConfig):
+                all_graphs.append(graph_config)
+        return all_graphs
+    
+    def set_legends(self):
+        for graph_config in self.get_all_graphs():
+            graph_config.set_legend_loc()
+
+graph_configurations = GraphsConfigurations()
     
 class LinregressRange:
     def __init__(self, min, max) -> None:
@@ -256,6 +270,7 @@ def format_file_data(file_data:DataFrame, pellet:Pellet) -> GraphEquations:
 def create_graphs(experiment_data_files: Dict[str, pd.DataFrame]):
 
     plot_data_points(experiment_data_files)
+    graph_configurations.set_legends()
 
 def plot_data_points(experiment_data_files:DataFrame):
     
@@ -264,11 +279,10 @@ def plot_data_points(experiment_data_files:DataFrame):
         format_file_data(file_data, pellet_config)
 
         # Iterate over all graphs in Graphs
-        for _, graph_config in vars(GraphsConfigurations).items():
-            if isinstance(graph_config,GraphConfig):
-                pellet_config.plot(graph_config)
+        for graph_config in graph_configurations.get_all_graphs():
+            pellet_config.plot(graph_config)
         pellet_config._plot(
-            graph=GraphsConfigurations.reduct_graph_config.graph,
+            graph=graph_configurations.reduct_graph_config.graph,
             data=graph_equations.external_mass_transfer.iloc[:max_time_plot_s],
             time_data_s=graph_equations.time.iloc[:max_time_plot_s],
         )

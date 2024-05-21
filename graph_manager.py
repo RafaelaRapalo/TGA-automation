@@ -1,4 +1,3 @@
-from matplotlib import pyplot as plt
 import numpy as np
 from pandas import DataFrame, Series
 
@@ -42,18 +41,17 @@ class GraphEquations:
 
         
 class GraphConfig:
-    def __init__(self, y_label:str, y_values_callable:lambda:Series, label_font_size:int=20,tick_font_size:int=20, label_color:str="black", time_label:str='Time (min)', legend_loc:str='upper right'):
-        _,graph = plt.subplots(figsize=(10, 6))
+    def __init__(self, plt, y_label:str, y_values_callable:lambda:Series, label_font_size:int=20,tick_font_size:int=20, label_color:str="black", time_label:str='Time (min)', legend_loc:str='lower right'):
+        fig,self.graph = plt.subplots(figsize=(10, 6))
 
-        graph.set_xlabel(time_label, color=label_color, fontsize=label_font_size)
-        graph.set_ylabel(y_label, color=label_color, fontsize=label_font_size)
-        graph.tick_params(labelsize=tick_font_size)
-
-        graph.legend(loc=legend_loc)
-        
-        self.graph = graph
+        self.graph.set_xlabel(time_label, color=label_color, fontsize=label_font_size)
+        self.graph.set_ylabel(y_label, color=label_color, fontsize=label_font_size)
+        self.graph.tick_params(labelsize=tick_font_size)
         self.y_values_callable = y_values_callable
+        self.legend_loc = legend_loc
 
     def y_values(self):
         return self.y_values_callable()
     
+    def set_legend_loc(self):
+        self.graph.legend(loc=self.legend_loc)
