@@ -22,8 +22,12 @@ class GraphEquations:
         self.iron_layer_limiting = 1/2-(1/3)*self.reduction-(1/2)*pow(1-self.reduction,2/3)
         self.limiting_mixed_control = 1-pow(1-self.reduction,1/3)
         self.complete_internal_burning = np.log(1-self.reduction)
-        self.external_mass_transfer = 3.7594*0.0008155/(2*pellet.initial_radius)*4*np.pi*pow(pellet.initial_radius,2)*(11.04921-4.40365)*time/(pellet.initial_mass/(55.85+1.5*16))
-        self.external_mass_transfer.clip(upper=1,inplace=True)
+        extraction_rate = 2.6*0.0008155/(2*pellet.initial_radius)*4*np.pi*pow(pellet.initial_radius,2)*(11.04921-7.40365)
+        oxy_mol_number = (pellet.initial_mass*1.5/(55.85+1.5*16))
+        external_mass_transfer_const = extraction_rate/oxy_mol_number 
+        starvation_control_const = (1.5/22.4)/3/(pellet.initial_mass*1.5/(55.85+1.5*16))
+        self.joint_emt_plus_sc= time*(1/(1/external_mass_transfer_const + 1/starvation_control_const))
+        self.joint_emt_plus_sc.clip(upper=1,inplace=True)
 
         # # Reduction = ((Ox / Fe)[fe2o3] - (Ox / Fe)[DRI]) / (Ox / Fe)[fe2o3]
         # self.reduction = ((hematite_oxygen_pct / hematite_iron_pct) - (self.oxygen_in_pellet/hematite_iron_pct)) / (hematite_oxygen_pct / hematite_iron_pct)        

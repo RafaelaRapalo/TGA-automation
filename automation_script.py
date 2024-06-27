@@ -15,7 +15,7 @@ pellet_file_id_index_end = 13
 time_column_title = 'Time(s)'
 weight_column_title = 'Weight'
 
-max_time_plot_s = 25*60
+max_time_plot_s = 100*60
 experiment_duration = 100*60
 plateau_time = 3*60
 hematite_oxygen_pct = 0.300564
@@ -41,7 +41,7 @@ class GraphsConfigurations:
         self.iron_layer_limiting_graph_config = GraphConfig(plt,'$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$',y_values_callable=lambda:graph_equations.iron_layer_limiting)
         self.mixed_control_limiting_graph_config = GraphConfig(plt,'$1-(1-F)^\\frac{1}{3}$',y_values_callable=lambda:graph_equations.limiting_mixed_control)
         self.complete_internal_burning_graph_config = GraphConfig(plt,'$ln(1-F)$',y_values_callable=lambda:graph_equations.complete_internal_burning)
-        self.external_mass_transfer_graph_config = GraphConfig(plt,'$F$',y_values_callable=lambda:graph_equations.external_mass_transfer)
+        self.joint_emt_plus_sc = GraphConfig(plt,'$F$',y_values_callable=lambda:graph_equations.joint_emt_plus_sc)
 
     def get_all_graphs(self):
         all_graphs:list[GraphConfig] = []
@@ -146,6 +146,15 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         initial_radius = 0.0086
     )
 
+    #Information Pellet 3
+    pellet_3 = Pellet(
+        initial_mass=8.057,
+        start_time_s=4612,
+        color='lightseagreen',
+        label='D=16.1mm',
+        iron_content_XRD=1,
+        initial_radius = 0.0080
+    )
     #Information Pellet 5
     pellet_5 = Pellet(
         initial_mass=5.423,
@@ -196,14 +205,25 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         initial_radius = 0.0049
     )
 
+    #Information Pellet 12
+    pellet_12 = Pellet(
+        initial_mass=1.3451,
+        start_time_s=4573,
+        color='steelblue',
+        label='D=8.7mm',
+        iron_content_XRD=1,
+        initial_radius = 0.00437
+    )
     switcher = {
         1: pellet_1,
         2: pellet_2,
+        3: pellet_3,
         5: pellet_5,
         6: pellet_6,
         7: pellet_7,
         9: pellet_9,
         10: pellet_10,
+        12: pellet_12,
     }
     if pellet_number not in switcher:
         raise ValueError(f"No file found for Pellet number: {pellet_number}")
@@ -281,10 +301,10 @@ def plot_data_points(experiment_data_files:DataFrame):
         # Iterate over all graphs in Graphs
         for graph_config in graph_configurations.get_all_graphs():
             pellet_config.plot(graph_config)
-        pellet_config._plot(
-            graph=graph_configurations.reduct_graph_config.graph,
-            data=graph_equations.external_mass_transfer.iloc[:max_time_plot_s],
-            time_data_s=graph_equations.time.iloc[:max_time_plot_s],
-        )
+        # pellet_config._plot(
+        #     graph=graph_configurations.reduct_graph_config.graph,
+        #     data=graph_equations.joint_emt_plus_sc.iloc[:max_time_plot_s],
+        #     time_data_s=graph_equations.time.iloc[:max_time_plot_s],
+        # )
 
 __main__()
