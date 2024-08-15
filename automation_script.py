@@ -7,6 +7,7 @@ from scipy.stats import linregress
 import numpy as np
 
 from graph_manager import *
+from reduction_workbook import ReductionWorkbook
 
 # Constants
 pellet_file_id_index_start = 12
@@ -21,40 +22,16 @@ plateau_time = 3*60
 hematite_oxygen_pct = 0.300564
 hematite_iron_pct = 0.699436
 
-graph_equations = GraphEquations()
-
-def __main__():
+def get_file_data():
     """
     - Read the data files from local directory
     - Format data for Iron Reduction percentage
-    - Plot graphs
+    returns Dict[FileName:str, Data:DataFrame]
     """
     # Get the data from files
     dir_current = os.path.dirname(os.path.abspath(__file__))
     experiment_data_files:Dict[str, pd.DataFrame] = read_data_files(dir_current)
-    create_graphs(experiment_data_files)
-    plt.show()
-
-class GraphsConfigurations:
-    def __init__(self):
-        self.reduct_graph_config = GraphConfig(plt,'F',y_values_callable=lambda:graph_equations.reduction)
-        self.iron_layer_limiting_graph_config = GraphConfig(plt,'$\\frac{1}{2}-\\frac{1}{3}F-\\frac{1}{2}(1-F)^{\\frac{2}{3}}$',y_values_callable=lambda:graph_equations.iron_layer_limiting)
-        self.mixed_control_limiting_graph_config = GraphConfig(plt,'$1-(1-F)^\\frac{1}{3}$',y_values_callable=lambda:graph_equations.limiting_mixed_control)
-        self.complete_internal_burning_graph_config = GraphConfig(plt,'$ln(1-F)$',y_values_callable=lambda:graph_equations.complete_internal_burning)
-        self.joint_emt_plus_sc = GraphConfig(plt,'$F$',y_values_callable=lambda:graph_equations.joint_emt_plus_sc)
-
-    def get_all_graphs(self):
-        all_graphs:list[GraphConfig] = []
-        for _, graph_config in vars(self).items():
-            if isinstance(graph_config,GraphConfig):
-                all_graphs.append(graph_config)
-        return all_graphs
-    
-    def set_legends(self):
-        for graph_config in self.get_all_graphs():
-            graph_config.set_legend_loc()
-
-graph_configurations = GraphsConfigurations()
+    return experiment_data_files
     
 class LinregressRange:
     def __init__(self, min, max) -> None:
@@ -87,10 +64,10 @@ class Pellet:
 
         return predicted_Y, slope, intercept
     
-    def plot(self, graph_config:GraphConfig, linregress_ranges:list[LinregressRange] = []):
+    def plot(self, graph_config:GraphConfig, graph_time: Series, linregress_ranges:list[LinregressRange] = []):
         self._plot(
             graph=graph_config.graph,
-            time_data_s=graph_equations.time.iloc[:max_time_plot_s],
+            time_data_s=graph_time.iloc[:max_time_plot_s],
             data=graph_config.y_values().iloc[:max_time_plot_s],
             linregress_ranges=linregress_ranges
         )
@@ -108,7 +85,7 @@ class Pellet:
                 y=filtered_data
             )
             # plot linregress
-            graph.plot(
+            self.lines, = graph.plot(
                 filtered_time / 60, 
                 predicted_y, 
                 color='black',
@@ -124,6 +101,19 @@ class Pellet:
             label=label,
             alpha=1
         )
+
+# returns a list of x values closest to respective y_values_to_find values
+def get_nearest_x_for_y(y_values_to_find, y_list: Series, x_list):
+    result = []
+    for y_value in y_values_to_find:
+        closest_index = (y_list - y_value).abs().idxmin()
+        closest_x_value = x_list[closest_index]
+        result.append(closest_x_value)
+    return result
+
+# returns a list of x values closest to respective y_values_to_find values
+def get_nearest_y_index_from_value(y_value:int, y_list: Series):
+    return (y_list - y_value).abs().idxmin()
 
 def convert_to_pellet_config(pellet_number:int) -> Pellet:
     #Information Pellet 1
@@ -142,7 +132,7 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4483,
         color='firebrick',
         label='D=17.2mm',
-        iron_content_XRD=1,
+        iron_content_XRD=0.9882,
         initial_radius = 0.0086
     )
 
@@ -152,7 +142,7 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4612,
         color='lightseagreen',
         label='D=16.1mm',
-        iron_content_XRD=1,
+        iron_content_XRD=0.9925,
         initial_radius = 0.0080
     )
     #Information Pellet 5
@@ -171,7 +161,7 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4552,
         color='magenta',
         label='D=13.4mm',
-        iron_content_XRD=1,
+        iron_content_XRD=0.9832,
         initial_radius = 0.0067
     )
 
@@ -181,7 +171,7 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4493,
         color='orange',
         label='D=12.8mm',
-        iron_content_XRD=1,
+        iron_content_XRD=0.9979,
         initial_radius = 0.0064
     )
 
@@ -235,7 +225,7 @@ def convert_file_name_to_pellet_config(file_name:str) -> Pellet:
     pellet_number = int(file_name[pellet_file_id_index_start:pellet_file_id_index_end+1])
     return convert_to_pellet_config(pellet_number)
 
-# helper methods
+
 def read_data_files(path: str) -> Dict[str, pd.DataFrame]:
     """
     TXT files are expected to be in the following format -> [Time:Weight]
@@ -264,47 +254,66 @@ def read_data_files(path: str) -> Dict[str, pd.DataFrame]:
 
     return data_mass_dict
 
-def format_file_data(file_data:DataFrame, pellet:Pellet) -> GraphEquations:
+def format_file_data(file_data:DataFrame, pellet:Pellet) -> DataFrame:
     """
     file_data should be a DataFrame with the following format -> [Time ; Weight]
 
-    Returns -> Formatted data with the following collumns:
+    Returns -> Data with excluded Initial Values (pellet.start_time_s) and Final Values (experiment_duration)
 
-    [time_column_title ; weight_column_title ; oxygen_in_pellet_title ; 
-    reduction_title ; reduction_pct_title ; iron_layer_limiting_title ;
-    limiting_mixed_control_title ; complete_internal_burning_title]
+    Data has the following collumns:
+
+    [time_column_title ; weight_column_title]
     """
     # Use first two columns -> Time : Weight
     formatted_data:DataFrame = file_data.iloc[:, :2]
     formatted_data.columns = [time_column_title,weight_column_title]
 
-        # exclude initial values and set the new initial time as zero
+    # exclude initial values and set the new initial time as zero
     formatted_data = formatted_data.iloc[pellet.start_time_s:]
     formatted_data[time_column_title] -= pellet.start_time_s
 
-        # exclude final values
-    formatted_data = formatted_data.iloc[:experiment_duration]
+    # exclude final values
+    return formatted_data.iloc[:experiment_duration]
         
-    graph_equations.calculate(time=formatted_data[time_column_title], weight=formatted_data[weight_column_title], pellet=pellet, plateau_time=plateau_time)
 
-def create_graphs(experiment_data_files: Dict[str, pd.DataFrame]):
-
-    plot_data_points(experiment_data_files)
-    graph_configurations.set_legends()
-
-def plot_data_points(experiment_data_files:DataFrame):
+# def plot_data_points(experiment_data_files:DataFrame):
     
-    for file_name, file_data in experiment_data_files.items():
-        pellet_config = convert_file_name_to_pellet_config(file_name)
-        format_file_data(file_data, pellet_config)
+#     F_values_to_find = [0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+#     print(' '.join([' '] + [str(cell) for cell in F_values_to_find]))
+#     for file_name, file_data in experiment_data_files.items():
+#         pellet_config = convert_file_name_to_pellet_config(file_name)
+#         format_file_data(file_data, pellet_config)
 
-        # Iterate over all graphs in Graphs
-        for graph_config in graph_configurations.get_all_graphs():
-            pellet_config.plot(graph_config)
-        # pellet_config._plot(
-        #     graph=graph_configurations.reduct_graph_config.graph,
-        #     data=graph_equations.joint_emt_plus_sc.iloc[:max_time_plot_s],
-        #     time_data_s=graph_equations.time.iloc[:max_time_plot_s],
-        # )
+#         # Iterate over all graphs in Graphs
+#         for graph_config in graph_configurations.get_all_graphs():
+#             pellet_config.plot(graph_config)
+#         reduct_workbook = ReductionWorkbook(pellet_config.initial_radius, pellet_config.initial_mass)
+        
+#         params_model_t_pore, _ = curve_fit(
+#             reduct_workbook.model_t_pore, 
+#             np.clip(graph_configurations.reduct_graph_config.y_values().iloc[:max_time_plot_s].to_numpy(),0,1),
+#             graph_equations.time.iloc[:max_time_plot_s].to_numpy(), 
+#             p0=[1],
+#             bounds=(0,5)
+#         )
 
-__main__()
+#         params_model_t_external, _ = curve_fit(
+#             reduct_workbook.model_t_external, 
+#             np.clip(graph_configurations.reduct_graph_config.y_values().iloc[:max_time_plot_s].to_numpy(),0,1),
+#             graph_equations.time.iloc[:max_time_plot_s].to_numpy(), 
+#             p0=[1],
+#             bounds=(0,10)
+#         )
+
+#         params_model_t_mixed, _ = curve_fit(
+#             reduct_workbook.model_t_mixed, 
+#             np.clip(graph_configurations.reduct_graph_config.y_values().iloc[:max_time_plot_s].to_numpy(),0,1),
+#             graph_equations.time.iloc[:max_time_plot_s].to_numpy(), 
+#             p0=[1],
+#             bounds=(0,5)
+#         )
+        
+#         pellet_config.plot_model(reduct_workbook.model_t_pore, params_model_t_pore)
+#         pellet_config.plot_model(reduct_workbook.model_t_external, params_model_t_external)
+#         pellet_config.plot_model(reduct_workbook.model_t_mixed, params_model_t_mixed)
+#         pass
