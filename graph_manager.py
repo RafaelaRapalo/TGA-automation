@@ -58,4 +58,4 @@ class GraphConfig:
         return self.y_values_callable()
     
     def set_legend_loc(self):
-        self.graph.legend(loc=self.legend_loc)
+        self.graph.legend(loc=self.legend_loc, prop={'size': 15})

@@ -7,7 +7,6 @@ from scipy.stats import linregress
 import numpy as np
 
 from graph_manager import *
-from reduction_workbook import ReductionWorkbook
 
 # Constants
 pellet_file_id_index_start = 12
@@ -16,7 +15,7 @@ pellet_file_id_index_end = 13
 time_column_title = 'Time(s)'
 weight_column_title = 'Weight'
 
-max_time_plot_s = 100*60
+max_time_plot_s = 25*60
 experiment_duration = 100*60
 plateau_time = 3*60
 hematite_oxygen_pct = 0.300564
@@ -39,7 +38,7 @@ class LinregressRange:
         self.max = max
 
 class Pellet:
-    def __init__(self, initial_mass:float, start_time_s:int, color:str, label:str, iron_content_XRD:float,initial_radius:float):
+    def __init__(self, initial_mass:float, start_time_s:int, color:str, label:str, iron_content_XRD:float,initial_radius:float,final_mass:float, final_iron_content:float):
         iron_content =0.699436
         oxygen_content = 0.300564
         gangue_content = 0.04
@@ -51,6 +50,8 @@ class Pellet:
         self.label = label
         self.iron_content_XRD = iron_content_XRD
         self.initial_radius = initial_radius
+        self.final_mass = final_mass
+        self.final_iron_content = final_iron_content
 
     def get_linregress_y_values(self, x, y):
 
@@ -122,8 +123,10 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4670,
         color='blue',
         label='D=17.1mm',
-        iron_content_XRD=1,
-        initial_radius = 0.0085
+        iron_content_XRD=0.992,
+        initial_radius = 0.0085,
+        final_mass= 7.0,
+        final_iron_content = 0.928 + 1*(0.95*55.85/(0.95*55.85*16))
     )
 
     #Information Pellet 2
@@ -132,8 +135,10 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4483,
         color='firebrick',
         label='D=17.2mm',
-        iron_content_XRD=0.9882,
-        initial_radius = 0.0086
+        iron_content_XRD=0.991,
+        initial_radius = 0.0086,
+        final_mass= 6.7,
+        final_iron_content = 0.925 + 1.1*(0.95*55.85/(0.95*55.85*16))
     )
 
     #Information Pellet 3
@@ -142,8 +147,10 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4612,
         color='lightseagreen',
         label='D=16.1mm',
-        iron_content_XRD=0.9925,
-        initial_radius = 0.0080
+        iron_content_XRD=0.994,
+        initial_radius = 0.0080,
+        final_mass= 5.8,
+        final_iron_content = 0.928 + 0.7*(0.95*55.85/(0.95*55.85*16))
     )
     #Information Pellet 5
     pellet_5 = Pellet(
@@ -152,7 +159,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         color='red',
         label='D=13.9mm',
         iron_content_XRD=1,
-        initial_radius = 0.00695
+        initial_radius = 0.00695,
+        final_mass= 3.5,
+        final_iron_content = 0.936 + 1.6*(0.95*55.85/(0.95*55.85*16))
     )
 
     #Information Pellet 6
@@ -161,8 +170,10 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4552,
         color='magenta',
         label='D=13.4mm',
-        iron_content_XRD=0.9832,
-        initial_radius = 0.0067
+        iron_content_XRD=0.987,
+        initial_radius = 0.0067,
+        final_mass= 3.5,
+        final_iron_content = 0.936 + 1.6*(0.95*55.85/(0.95*55.85*16))
     )
 
     #Information Pellet 7
@@ -171,8 +182,10 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4493,
         color='orange',
         label='D=12.8mm',
-        iron_content_XRD=0.9979,
-        initial_radius = 0.0064
+        iron_content_XRD=0.998,
+        initial_radius = 0.0064,
+        final_mass= 2.9,
+        final_iron_content = 0.952 + 0.2*(0.95*55.85/(0.95*55.85*16))
     )
 
     #Information Pellet 9
@@ -181,8 +194,10 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         start_time_s=4580,
         color='green',
         label='D=9.5mm',
-        iron_content_XRD=1,
-        initial_radius = 0.00475
+        iron_content_XRD=0.996,
+        initial_radius = 0.00475,
+        final_mass= 1.2,
+        final_iron_content = 0.953 + 0.5*(0.95*55.85/(0.95*55.85*16))
     )
 
     #Information Pellet 10
@@ -192,7 +207,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         color='purple',
         label='D=9.8mm',
         iron_content_XRD=1,
-        initial_radius = 0.0049
+        initial_radius = 0.0049,
+        final_mass= 1.4,
+        final_iron_content = 0.961
     )
 
     #Information Pellet 12
@@ -202,7 +219,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         color='steelblue',
         label='D=8.7mm',
         iron_content_XRD=1,
-        initial_radius = 0.00437
+        initial_radius = 0.00437,
+        final_mass= 1.0,
+        final_iron_content = 0.94
     )
     switcher = {
         1: pellet_1,
