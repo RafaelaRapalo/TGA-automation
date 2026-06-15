@@ -15,7 +15,7 @@ pellet_file_id_index_end = 13
 time_column_title = 'Time(s)'
 weight_column_title = 'Weight'
 
-max_time_plot_s = 25*60
+max_time_plot_s = 60*60
 experiment_duration = 100*60
 plateau_time = 3*60
 hematite_oxygen_pct = 0.300564
@@ -38,7 +38,7 @@ class LinregressRange:
         self.max = max
 
 class Pellet:
-    def __init__(self, initial_mass:float, start_time_s:int, color:str, label:str, iron_content_XRD:float,initial_radius:float,final_mass:float, final_iron_content:float):
+    def __init__(self, initial_mass:float, start_time_s:int, color:str, label:str, iron_content_XRD:float,initial_radius:float,final_mass:float, final_iron_content:float, S_w_to_iron:float, S_m_to_w:float):
         iron_content =0.699436
         oxygen_content = 0.300564
         gangue_content = 0.04
@@ -52,6 +52,8 @@ class Pellet:
         self.initial_radius = initial_radius
         self.final_mass = final_mass
         self.final_iron_content = final_iron_content
+        self.S_w_to_iron = S_w_to_iron
+        self.S_m_to_w = S_m_to_w
 
     def get_linregress_y_values(self, x, y):
 
@@ -68,8 +70,8 @@ class Pellet:
     def plot(self, graph_config:GraphConfig, graph_time: Series, linregress_ranges:list[LinregressRange] = []):
         self._plot(
             graph=graph_config.graph,
-            time_data_s=graph_time.iloc[:max_time_plot_s],
-            data=graph_config.y_values().iloc[:max_time_plot_s],
+            time_data_s=graph_time.iloc[:len(graph_config.y_values())],
+            data=graph_config.y_values(),
             linregress_ranges=linregress_ranges
         )
 
@@ -113,8 +115,8 @@ def get_nearest_x_for_y(y_values_to_find, y_list: Series, x_list):
     return result
 
 # returns a list of x values closest to respective y_values_to_find values
-def get_nearest_y_index_from_value(y_value:int, y_list: Series):
-    return (y_list - y_value).abs().idxmin()
+def get_nearest_y_index_from_value(y_value:float, y_list: Series):
+    return int((y_list - y_value).abs().idxmin())
 
 def convert_to_pellet_config(pellet_number:int) -> Pellet:
     #Information Pellet 1
@@ -126,7 +128,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         iron_content_XRD=0.992,
         initial_radius = 0.0085,
         final_mass= 7.0,
-        final_iron_content = 0.928 + 1*(0.95*55.85/(0.95*55.85*16))
+        final_iron_content = 0.928 + (1/100)*(0.95*55.85/(0.95*55.85+16)),
+        S_w_to_iron = 30,
+        S_m_to_w = 30
     )
 
     #Information Pellet 2
@@ -138,7 +142,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         iron_content_XRD=0.991,
         initial_radius = 0.0086,
         final_mass= 6.7,
-        final_iron_content = 0.925 + 1.1*(0.95*55.85/(0.95*55.85*16))
+        final_iron_content = 0.925 + (1.1/100)*(0.95*55.85/(0.95*55.85+16)),
+        S_w_to_iron = 30,
+        S_m_to_w = 30
     )
 
     #Information Pellet 3
@@ -150,7 +156,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         iron_content_XRD=0.994,
         initial_radius = 0.0080,
         final_mass= 5.8,
-        final_iron_content = 0.928 + 0.7*(0.95*55.85/(0.95*55.85*16))
+        final_iron_content = 0.928 + (0.7/100)*(0.95*55.85/(0.95*55.85+16)),
+        S_w_to_iron = 30,
+        S_m_to_w = 30
     )
     #Information Pellet 5
     pellet_5 = Pellet(
@@ -161,7 +169,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         iron_content_XRD=1,
         initial_radius = 0.00695,
         final_mass= 3.5,
-        final_iron_content = 0.936 + 1.6*(0.95*55.85/(0.95*55.85*16))
+        final_iron_content = 0.936 + (1.6/100)*(0.95*55.85/(0.95*55.85+16)),
+        S_w_to_iron = 30,
+        S_m_to_w = 30
     )
 
     #Information Pellet 6
@@ -173,7 +183,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         iron_content_XRD=0.987,
         initial_radius = 0.0067,
         final_mass= 3.5,
-        final_iron_content = 0.936 + 1.6*(0.95*55.85/(0.95*55.85*16))
+        final_iron_content = 0.936 + (1.6/100)*(0.95*55.85/(0.95*55.85+16)),
+        S_w_to_iron = 30,
+        S_m_to_w = 30
     )
 
     #Information Pellet 7
@@ -185,7 +197,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         iron_content_XRD=0.998,
         initial_radius = 0.0064,
         final_mass= 2.9,
-        final_iron_content = 0.952 + 0.2*(0.95*55.85/(0.95*55.85*16))
+        final_iron_content = 0.952 + (0.2/100)*(0.95*55.85/(0.95*55.85+16)),
+        S_w_to_iron = 30,
+        S_m_to_w = 30
     )
 
     #Information Pellet 9
@@ -197,7 +211,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         iron_content_XRD=0.996,
         initial_radius = 0.00475,
         final_mass= 1.2,
-        final_iron_content = 0.953 + 0.5*(0.95*55.85/(0.95*55.85*16))
+        final_iron_content = 0.953 + (0.5/100)*(0.95*55.85/(0.95*55.85+16)),
+        S_w_to_iron = 50,
+        S_m_to_w = 31
     )
 
     #Information Pellet 10
@@ -209,7 +225,9 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         iron_content_XRD=1,
         initial_radius = 0.0049,
         final_mass= 1.4,
-        final_iron_content = 0.961
+        final_iron_content = 0.961,
+        S_w_to_iron = 50,
+        S_m_to_w = 31
     )
 
     #Information Pellet 12
@@ -221,7 +239,37 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         iron_content_XRD=1,
         initial_radius = 0.00437,
         final_mass= 1.0,
-        final_iron_content = 0.94
+        final_iron_content = 0.94,
+        S_w_to_iron = 50,
+        S_m_to_w = 31
+    )
+
+    #Information Pellet 13 whichis the first Keetac Pellet reduced attracted do magnet and broke after reduction
+    pellet_13 = Pellet(
+        initial_mass=1.3451,
+        start_time_s=4581,
+        color='navy',
+        label='D=12.4mm (II)',
+        iron_content_XRD=0.99,
+        initial_radius = 0.0062,
+        final_mass= 3.072,
+        final_iron_content = 0.976 + (0.8/100)*(0.95*55.85/(0.95*55.85+16))+ (0.7/100)*(3*55.85/(3*55.85+4*16)),
+        S_w_to_iron = 50,
+        S_m_to_w = 30
+    )
+
+    #Information Pellet 14 whichis the first Keetac Pellet reduced attracted do magnet and broke after reduction
+    pellet_14 = Pellet(
+        initial_mass=1.3451,
+        start_time_s=4587,
+        color='darkslategrey',
+        label='D=12.5mm (II)',
+        iron_content_XRD=0.998,
+        initial_radius = 0.0063,
+        final_mass= 3.132,
+        final_iron_content = 0.985 + (0.4/100)*(0.95*55.85/(0.95*55.85+16)),
+        S_w_to_iron = 50,
+        S_m_to_w = 30
     )
     switcher = {
         1: pellet_1,
@@ -233,7 +281,10 @@ def convert_to_pellet_config(pellet_number:int) -> Pellet:
         9: pellet_9,
         10: pellet_10,
         12: pellet_12,
+        13: pellet_13,
+        14: pellet_14
     }
+    
     if pellet_number not in switcher:
         raise ValueError(f"No file found for Pellet number: {pellet_number}")
  
@@ -290,6 +341,7 @@ def format_file_data(file_data:DataFrame, pellet:Pellet) -> DataFrame:
     # exclude initial values and set the new initial time as zero
     formatted_data = formatted_data.iloc[pellet.start_time_s:]
     formatted_data[time_column_title] -= pellet.start_time_s
+    formatted_data[weight_column_title] -= formatted_data[weight_column_title][pellet.start_time_s]
 
     # exclude final values
     return formatted_data.iloc[:experiment_duration]
